@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { CheckIn } from '../types';
-import { mockCheckIns } from '../data/mockData';
+import { storage } from '../utils/storage';
 
 interface CheckInStore {
   checkIns: CheckIn[];
@@ -12,17 +12,21 @@ interface CheckInStore {
 }
 
 export const useCheckInStore = create<CheckInStore>((set, get) => ({
-  checkIns: mockCheckIns,
+  checkIns: storage.get('checkIns', []),
 
-  addCheckIn: (checkIn) => set((state) => ({
-    checkIns: [...state.checkIns, checkIn]
-  })),
+  addCheckIn: (checkIn) => {
+    const newCheckIns = [...get().checkIns, checkIn];
+    storage.set('checkIns', newCheckIns);
+    set({ checkIns: newCheckIns });
+  },
 
-  updateCheckIn: (id, updates) => set((state) => ({
-    checkIns: state.checkIns.map((c) =>
+  updateCheckIn: (id, updates) => {
+    const newCheckIns = get().checkIns.map((c) =>
       c.id === id ? { ...c, ...updates } : c
-    )
-  })),
+    );
+    storage.set('checkIns', newCheckIns);
+    set({ checkIns: newCheckIns });
+  },
 
   getCheckInsByPetId: (petId) => get().checkIns.filter((c) => c.petId === petId),
 

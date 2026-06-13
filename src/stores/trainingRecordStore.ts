@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { TrainingRecord } from '../types';
-import { mockTrainingRecords } from '../data/mockData';
+import { storage } from '../utils/storage';
 
 interface TrainingRecordStore {
   records: TrainingRecord[];
-  addRecord: (record: TrainingRecord) => void;
+  addRecord: (record: TrainingRecord, isNew?: boolean) => void;
   updateRecord: (id: string, updates: Partial<TrainingRecord>) => void;
   deleteRecord: (id: string) => void;
   getRecordsByCourseId: (courseId: string) => TrainingRecord[];
@@ -13,23 +13,46 @@ interface TrainingRecordStore {
 }
 
 export const useTrainingRecordStore = create<TrainingRecordStore>((set, get) => ({
-  records: mockTrainingRecords,
+  records: storage.get('trainingRecords', []),
 
-  addRecord: (record) => set((state) => ({
-    records: [...state.records, record].sort(
-      (a, b) => new Date(b.recordDate).getTime() - new Date(a.recordDate).getTime()
-    )
-  })),
+  addRecord: (record, isNew = true) => {
+    const currentRecords = get().records;
+    let newRecords: TrainingRecord[];
 
-  updateRecord: (id, updates) => set((state) => ({
-    records: state.records.map((r) =>
+    if (isNew) {
+      const exists = currentRecords.some(r => r.id === record.id);
+      if (exists) {
+        newRecords = currentRecords.map(r => r.id === record.id ? record : r);
+      } else {
+        newRecords = [record, ...currentRecords];
+      }
+    } else {
+      const index = currentRecords.findIndex(r => r.id === record.id);
+      if (index !== -1) {
+        newRecords = [...currentRecords];
+        newRecords[index] = record;
+      } else {
+        newRecords = [record, ...currentRecords];
+      }
+    }
+
+    storage.set('trainingRecords', newRecords);
+    set({ records: newRecords });
+  },
+
+  updateRecord: (id, updates) => {
+    const newRecords = get().records.map((r) =>
       r.id === id ? { ...r, ...updates } : r
-    )
-  })),
+    );
+    storage.set('trainingRecords', newRecords);
+    set({ records: newRecords });
+  },
 
-  deleteRecord: (id) => set((state) => ({
-    records: state.records.filter((r) => r.id !== id)
-  })),
+  deleteRecord: (id) => {
+    const newRecords = get().records.filter((r) => r.id !== id);
+    storage.set('trainingRecords', newRecords);
+    set({ records: newRecords });
+  },
 
   getRecordsByCourseId: (courseId) =>
     get().records

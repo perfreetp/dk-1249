@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Pet } from '../types';
-import { mockPets } from '../data/mockData';
+import { storage } from '../utils/storage';
 
 interface PetStore {
   pets: Pet[];
@@ -12,23 +12,32 @@ interface PetStore {
 }
 
 export const usePetStore = create<PetStore>((set, get) => ({
-  pets: mockPets,
-  currentPet: mockPets[0] || null,
+  pets: storage.get('pets', []),
+  currentPet: storage.get('currentPet', null),
 
-  setCurrentPet: (pet) => set({ currentPet: pet }),
+  setCurrentPet: (pet) => {
+    storage.set('currentPet', pet);
+    set({ currentPet: pet });
+  },
 
-  addPet: (pet) => set((state) => ({
-    pets: [...state.pets, pet]
-  })),
+  addPet: (pet) => {
+    const newPets = [...get().pets, pet];
+    storage.set('pets', newPets);
+    set({ pets: newPets });
+  },
 
-  updatePet: (id, updates) => set((state) => ({
-    pets: state.pets.map((p) =>
+  updatePet: (id, updates) => {
+    const newPets = get().pets.map((p) =>
       p.id === id ? { ...p, ...updates } : p
-    ),
-    currentPet: state.currentPet?.id === id
-      ? { ...state.currentPet, ...updates }
-      : state.currentPet
-  })),
+    );
+    storage.set('pets', newPets);
+    set({
+      pets: newPets,
+      currentPet: get().currentPet?.id === id
+        ? { ...get().currentPet!, ...updates }
+        : get().currentPet
+    });
+  },
 
   getPetById: (id) => get().pets.find((p) => p.id === id)
 }));

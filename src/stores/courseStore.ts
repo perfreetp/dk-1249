@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Course, LessonTarget } from '../types';
-import { mockCourses } from '../data/mockData';
+import { storage } from '../utils/storage';
 
 interface CourseStore {
   courses: Course[];
@@ -15,35 +15,46 @@ interface CourseStore {
 }
 
 export const useCourseStore = create<CourseStore>((set, get) => ({
-  courses: mockCourses,
+  courses: storage.get('courses', []),
+
   currentCourse: null,
 
   setCurrentCourse: (course) => set({ currentCourse: course }),
 
-  addCourse: (course) => set((state) => ({
-    courses: [...state.courses, course]
-  })),
+  addCourse: (course) => {
+    const newCourses = [...get().courses, course];
+    storage.set('courses', newCourses);
+    set({ courses: newCourses });
+  },
 
-  updateCourse: (id, updates) => set((state) => ({
-    courses: state.courses.map((c) =>
+  updateCourse: (id, updates) => {
+    const newCourses = get().courses.map((c) =>
       c.id === id ? { ...c, ...updates } : c
-    ),
-    currentCourse: state.currentCourse?.id === id
-      ? { ...state.currentCourse, ...updates }
-      : state.currentCourse
-  })),
+    );
+    storage.set('courses', newCourses);
+    set({
+      courses: newCourses,
+      currentCourse: get().currentCourse?.id === id
+        ? { ...get().currentCourse!, ...updates }
+        : get().currentCourse
+    });
+  },
 
-  deleteCourse: (id) => set((state) => ({
-    courses: state.courses.filter((c) => c.id !== id),
-    currentCourse: state.currentCourse?.id === id ? null : state.currentCourse
-  })),
+  deleteCourse: (id) => {
+    const newCourses = get().courses.filter((c) => c.id !== id);
+    storage.set('courses', newCourses);
+    set({
+      courses: newCourses,
+      currentCourse: get().currentCourse?.id === id ? null : get().currentCourse
+    });
+  },
 
   getCourseById: (id) => get().courses.find((c) => c.id === id),
 
   getCoursesByPetId: (petId) => get().courses.filter((c) => c.petId === petId),
 
-  updateLessonTarget: (courseId, lesson, achieved) => set((state) => ({
-    courses: state.courses.map((c) => {
+  updateLessonTarget: (courseId, lesson, achieved) => {
+    const newCourses = get().courses.map((c) => {
       if (c.id !== courseId) return c;
 
       const updatedTargets = c.lessonTargets.map((t: LessonTarget) =>
@@ -51,6 +62,8 @@ export const useCourseStore = create<CourseStore>((set, get) => ({
       );
 
       return { ...c, lessonTargets: updatedTargets };
-    })
-  }))
+    });
+    storage.set('courses', newCourses);
+    set({ courses: newCourses });
+  }
 }));

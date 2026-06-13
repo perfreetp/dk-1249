@@ -1,19 +1,25 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Clipboard, Gift, AlertCircle, FileText, Save, ChevronLeft, ChevronRight, CheckCircle2, Clock } from 'lucide-react';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { Clipboard, Gift, AlertCircle, FileText, Save, ChevronLeft, CheckCircle2, Clock } from 'lucide-react';
 import { useCourseStore, usePetStore, useTrainingRecordStore } from '../../stores';
 import { ActionResult, RewardMethod, TrainingRecord } from '../../types';
 
 export default function RecordPage() {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const recordIdParam = searchParams.get('recordId');
+
   const { getCourseById, updateCourse } = useCourseStore();
   const { currentPet } = usePetStore();
   const { records, addRecord, getRecordsByCourseId, getRecordById } = useTrainingRecordStore();
 
   const course = courseId ? getCourseById(courseId) : null;
   const courseRecords = courseId ? getRecordsByCourseId(courseId) : [];
-  const [selectedRecordIndex, setSelectedRecordIndex] = useState<number | null>(null);
+
+  const existingRecord = recordIdParam ? getRecordById(recordIdParam) : null;
+  const isEditing = !!existingRecord;
+
   const [record, setRecord] = useState({
     actions: [
       { action: '', result: ActionResult.GOOD, attempts: 10, successes: 0 }
@@ -24,12 +30,11 @@ export default function RecordPage() {
     homeworkDue: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
     notes: ''
   });
+
   const [newProblem, setNewProblem] = useState('');
-  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
-    if (selectedRecordIndex !== null && courseRecords[selectedRecordIndex]) {
-      const existingRecord = courseRecords[selectedRecordIndex];
+    if (existingRecord) {
       setRecord({
         actions: existingRecord.actionPerformance.length > 0
           ? existingRecord.actionPerformance
@@ -41,7 +46,7 @@ export default function RecordPage() {
         notes: existingRecord.notes
       });
     }
-  }, [selectedRecordIndex, courseRecords]);
+  }, [existingRecord]);
 
   if (!course || !currentPet) {
     return (
@@ -105,15 +110,17 @@ export default function RecordPage() {
   };
 
   const handleSave = () => {
+    if (!course || !currentPet) return;
+
+    const validActions = record.actions.filter(a => a.action.trim() !== '');
+
     const trainingRecord: TrainingRecord = {
-      id: selectedRecordIndex !== null ? courseRecords[selectedRecordIndex].id : `record-${Date.now()}`,
+      id: existingRecord ? existingRecord.id : `record-${Date.now()}`,
       courseId: course.id,
       petId: currentPet.id,
       trainerId: 'trainer-001',
-      recordDate: selectedRecordIndex !== null
-        ? courseRecords[selectedRecordIndex].recordDate
-        : new Date(),
-      actionPerformance: record.actions.filter(a => a.action.trim() !== ''),
+      recordDate: existingRecord ? existingRecord.recordDate : new Date(),
+      actionPerformance: validActions,
       rewardMethod: record.rewardMethods,
       problemBehaviors: record.problemBehaviors,
       homework: record.homework,
@@ -121,26 +128,18 @@ export default function RecordPage() {
       notes: record.notes
     };
 
-    addRecord(trainingRecord);
+    addRecord(trainingRecord, !existingRecord);
 
-    const nextLesson = course.completedLessons + 1;
-    if (nextLesson <= course.totalLessons) {
-      updateCourse(course.id, {
-        completedLessons: nextLesson
-      });
+    if (!existingRecord) {
+      const nextLesson = course.completedLessons + 1;
+      if (nextLesson <= course.totalLessons) {
+        updateCourse(course.id, {
+          completedLessons: nextLesson
+        });
+      }
     }
 
-    setSelectedRecordIndex(null);
-    setRecord({
-      actions: [{ action: '', result: ActionResult.GOOD, attempts: 10, successes: 0 }],
-      rewardMethods: [],
-      problemBehaviors: [],
-      homework: '',
-      homeworkDue: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-      notes: ''
-    });
-
-    alert('记录已保存');
+    navigate(`/course/${course.id}`);
   };
 
   const getResultColor = (result: ActionResult) => {
@@ -160,61 +159,32 @@ export default function RecordPage() {
     <div className="min-h-screen bg-background pb-20">
       <div className="bg-gradient-to-br from-primary to-primary-dark text-white p-6 pt-12">
         <div className="flex items-center justify-between">
-          <button onClick={() => navigate(-1)} className="p-2 hover:bg-white/20 rounded-lg transition">
+          <button
+            onClick={() => navigate(`/course/${course.id}`)}
+            className="p-2 hover:bg-white/20 rounded-lg transition"
+          >
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <h1 className="text-xl font-bold">课堂记录</h1>
-          <button
-            onClick={() => setShowHistory(!showHistory)}
-            className="px-3 py-1 bg-white/20 rounded-lg text-sm hover:bg-white/30 transition"
-          >
-            历史
-          </button>
+          <h1 className="text-xl font-bold flex-1 text-center">
+            {isEditing ? '编辑记录' : '新建记录'}
+          </h1>
+          <div className="w-10"></div>
         </div>
-        <p className="text-white/80 text-sm mt-2">{currentPet.name} · {course.name}</p>
+        <p className="text-white/80 text-sm mt-2 text-center">
+          {currentPet.name} · {course.name} · 第{course.completedLessons + 1}课次
+        </p>
       </div>
-
-      {showHistory && courseRecords.length > 0 && (
-        <div className="p-4 bg-gray-50 border-b border-gray-200">
-          <h3 className="text-sm font-medium text-text-primary mb-3">历史记录</h3>
-          <div className="space-y-2">
-            {courseRecords.map((r, index) => (
-              <button
-                key={r.id}
-                onClick={() => {
-                  setSelectedRecordIndex(index);
-                  setShowHistory(false);
-                }}
-                className={`w-full p-3 rounded-lg text-left transition ${
-                  selectedRecordIndex === index
-                    ? 'bg-primary text-white'
-                    : 'bg-white hover:bg-gray-100'
-                }`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    <span className="text-sm">
-                      {new Date(r.recordDate).toLocaleDateString('zh-CN')}
-                    </span>
-                  </div>
-                  <span className="text-xs opacity-70">
-                    {r.actionPerformance.length}个动作
-                  </span>
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
       <div className="p-4 space-y-4">
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Clipboard className="w-5 h-5 text-primary" />
             <h3 className="font-semibold">动作表现</h3>
-            {selectedRecordIndex !== null && (
-              <span className="text-xs text-primary">正在编辑历史记录</span>
+            {isEditing && (
+              <span className="ml-auto text-xs text-secondary flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" />
+                编辑模式
+              </span>
             )}
           </div>
 
@@ -392,7 +362,7 @@ export default function RecordPage() {
           className="w-full py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary-dark transition flex items-center justify-center gap-2"
         >
           <Save className="w-5 h-5" />
-          保存记录
+          {isEditing ? '保存修改' : '保存记录'}
         </button>
       </div>
     </div>

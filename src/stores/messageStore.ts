@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Message } from '../types';
-import { mockMessages } from '../data/mockData';
+import { storage } from '../utils/storage';
 
 interface MessageStore {
   messages: Message[];
@@ -11,17 +11,21 @@ interface MessageStore {
 }
 
 export const useMessageStore = create<MessageStore>((set, get) => ({
-  messages: mockMessages,
+  messages: storage.get('messages', []),
 
-  addMessage: (message) => set((state) => ({
-    messages: [...state.messages, message]
-  })),
+  addMessage: (message) => {
+    const newMessages = [...get().messages, message];
+    storage.set('messages', newMessages);
+    set({ messages: newMessages });
+  },
 
-  markAsRead: (messageId) => set((state) => ({
-    messages: state.messages.map((m) =>
+  markAsRead: (messageId) => {
+    const newMessages = get().messages.map((m) =>
       m.id === messageId ? { ...m, isRead: true } : m
-    )
-  })),
+    );
+    storage.set('messages', newMessages);
+    set({ messages: newMessages });
+  },
 
   getUnreadCount: (userId) =>
     get().messages.filter((m) => m.receiverId === userId && !m.isRead).length,

@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Evaluation } from '../types';
-import { mockEvaluations } from '../data/mockData';
+import { storage } from '../utils/storage';
 
 interface EvaluationStore {
   evaluations: Evaluation[];
@@ -12,11 +12,13 @@ interface EvaluationStore {
 }
 
 export const useEvaluationStore = create<EvaluationStore>((set, get) => ({
-  evaluations: mockEvaluations,
+  evaluations: storage.get('evaluations', []),
 
-  addEvaluation: (evaluation) => set((state) => ({
-    evaluations: [...state.evaluations, evaluation]
-  })),
+  addEvaluation: (evaluation) => {
+    const newEvaluations = [...get().evaluations, evaluation];
+    storage.set('evaluations', newEvaluations);
+    set({ evaluations: newEvaluations });
+  },
 
   getEvaluationsByPetId: (petId) =>
     get().evaluations.filter((e) => e.petId === petId).sort(
