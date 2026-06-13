@@ -1,9 +1,11 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { TrendingUp, Award, Target, Zap } from 'lucide-react';
+import { TrendingUp, Award, Target, Zap, ClipboardList } from 'lucide-react';
 import { usePetStore, useCourseStore, useEvaluationStore, useCheckInStore } from '../../stores';
 
 export default function ProgressPage() {
+  const navigate = useNavigate();
   const { currentPet } = usePetStore();
   const { courses, getCoursesByPetId } = useCourseStore();
   const { evaluations, getLatestEvaluation, getEvaluationsByPetId } = useEvaluationStore();
@@ -299,6 +301,14 @@ export default function ProgressPage() {
             </div>
           </div>
         </div>
+
+        <button
+          onClick={() => navigate('/review')}
+          className="w-full py-3 bg-secondary text-white rounded-lg font-medium hover:bg-secondary-dark transition flex items-center justify-center gap-2"
+        >
+          <ClipboardList className="w-5 h-5" />
+          生成阶段复盘
+        </button>
       </div>
     </div>
   );

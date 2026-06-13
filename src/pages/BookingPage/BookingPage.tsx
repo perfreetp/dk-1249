@@ -1,22 +1,21 @@
 import { useState } from 'react';
-import { Calendar, Clock, CheckCircle2, XCircle, ChevronLeft, ChevronRight, FileText, Download } from 'lucide-react';
-import { usePetStore, useCourseStore } from '../../stores';
+import { useNavigate } from 'react-router-dom';
+import { Calendar, Clock, CheckCircle2, XCircle, ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { usePetStore, useCourseStore, useBookingStore } from '../../stores';
 import { Booking } from '../../types';
-import { mockBookings } from '../../data/mockData';
 
 export default function BookingPage() {
+  const navigate = useNavigate();
   const { currentPet } = usePetStore();
   const { courses, getCoursesByPetId } = useCourseStore();
+  const { bookings, addBooking, getBookingsByPetId, getUpcomingBooking } = useBookingStore();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedTime, setSelectedTime] = useState<string>('');
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [bookings] = useState<Booking[]>(mockBookings);
-
   const [newBooking, setNewBooking] = useState({
     courseId: '',
     notes: ''
   });
-
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   if (!currentPet) {
@@ -28,7 +27,8 @@ export default function BookingPage() {
   }
 
   const petCourses = getCoursesByPetId(currentPet.id);
-  const petBookings = bookings.filter(b => b.petId === currentPet.id);
+  const petBookings = getBookingsByPetId(currentPet.id);
+  const upcomingBooking = getUpcomingBooking(currentPet.id);
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -55,15 +55,7 @@ export default function BookingPage() {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
     return petBookings.some(booking => {
       const bookingDate = new Date(booking.scheduledDate);
-      return bookingDate.toDateString() === date.toDateString();
-    });
-  };
-
-  const getBookingForDate = (day: number) => {
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    return petBookings.find(booking => {
-      const bookingDate = new Date(booking.scheduledDate);
-      return bookingDate.toDateString() === date.toDateString();
+      return bookingDate.toDateString() === date.toDateString() && booking.status !== 'cancelled';
     });
   };
 
@@ -86,7 +78,21 @@ export default function BookingPage() {
   };
 
   const handleBooking = () => {
-    if (!selectedDate || !selectedTime || !newBooking.courseId) return;
+    if (!selectedDate || !selectedTime || !newBooking.courseId || !currentPet) return;
+
+    const booking: Booking = {
+      id: `booking-${Date.now()}`,
+      petId: currentPet.id,
+      trainerId: 'trainer-001',
+      courseId: newBooking.courseId,
+      scheduledDate: selectedDate,
+      scheduledTime: selectedTime,
+      status: 'pending',
+      notes: newBooking.notes,
+      createdAt: new Date()
+    };
+
+    addBooking(booking);
     setShowBookingModal(false);
     setSelectedDate(null);
     setSelectedTime('');
@@ -133,13 +139,11 @@ export default function BookingPage() {
             <div>
               <p className="text-sm text-white/80">下次课程</p>
               <p className="text-lg font-bold mt-1">
-                {petBookings.length > 0
-                  ? new Date(petBookings[0].scheduledDate).toLocaleDateString('zh-CN', {
+                {upcomingBooking
+                  ? `${new Date(upcomingBooking.scheduledDate).toLocaleDateString('zh-CN', {
                       month: 'short',
-                      day: 'numeric',
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })
+                      day: 'numeric'
+                    })} ${upcomingBooking.scheduledTime}`
                   : '暂无预约'}
               </p>
             </div>
@@ -191,7 +195,7 @@ export default function BookingPage() {
                   >
                     {day}
                     {isDateHasBooking(day) && (
-                      <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-accent rounded-full"></div>
+                      <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-1 h-1 bg-white rounded-full"></div>
                     )}
                   </div>
                 )}
@@ -281,7 +285,10 @@ export default function BookingPage() {
           )}
         </div>
 
-        <button className="w-full py-3 bg-gray-100 text-text-primary rounded-lg font-medium hover:bg-gray-200 transition flex items-center justify-center gap-2">
+        <button
+          onClick={() => navigate('/report')}
+          className="w-full py-3 bg-gray-100 text-text-primary rounded-lg font-medium hover:bg-gray-200 transition flex items-center justify-center gap-2"
+        >
           <Download className="w-5 h-5" />
           导出训练报告
         </button>

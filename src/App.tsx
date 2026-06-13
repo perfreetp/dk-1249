@@ -8,6 +8,8 @@ import ProgressPage from "./pages/ProgressPage/ProgressPage";
 import ProfilePage from "./pages/ProfilePage/ProfilePage";
 import BookingPage from "./pages/BookingPage/BookingPage";
 import RecordPage from "./pages/RecordPage/RecordPage";
+import ReportPage from "./pages/ReportPage/ReportPage";
+import ReviewPage from "./pages/ReviewPage/ReviewPage";
 
 function Home() {
   return <CoursePage />;
@@ -28,6 +30,8 @@ export default function App() {
           <Route path="/progress" element={<ProgressPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/booking" element={<BookingPage />} />
+          <Route path="/report" element={<ReportPage />} />
+          <Route path="/review" element={<ReviewPage />} />
         </Routes>
         <Navigation />
       </div>
