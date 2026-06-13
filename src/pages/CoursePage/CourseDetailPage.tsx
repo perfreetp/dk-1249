@@ -171,11 +171,16 @@ export default function CourseDetailPage() {
                       className="p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Clock className="w-4 h-4 text-text-secondary" />
-                          <span className="text-text-primary">
-                            {new Date(record.recordDate).toLocaleDateString('zh-CN')}
+                        <div className="flex items-center gap-3">
+                          <span className="px-2 py-1 bg-primary text-white rounded text-xs font-medium">
+                            第{record.lessonNumber}课
                           </span>
+                          <div className="flex items-center gap-2 text-sm">
+                            <Clock className="w-4 h-4 text-text-secondary" />
+                            <span className="text-text-primary">
+                              {new Date(record.recordDate).toLocaleDateString('zh-CN')}
+                            </span>
+                          </div>
                         </div>
                         <span className="text-xs text-primary">编辑</span>
                       </div>

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { Clipboard, Gift, AlertCircle, FileText, Save, ChevronLeft, CheckCircle2, Clock } from 'lucide-react';
-import { useCourseStore, usePetStore, useTrainingRecordStore } from '../../stores';
-import { ActionResult, RewardMethod, TrainingRecord } from '../../types';
+import { Clipboard, Gift, AlertCircle, FileText, Save, ChevronLeft, CheckCircle2 } from 'lucide-react';
+import { useCourseStore, usePetStore, useTrainingRecordStore, useHomeworkTaskStore } from '../../stores';
+import { ActionResult, RewardMethod, TrainingRecord, HomeworkTask } from '../../types';
 
 export default function RecordPage() {
   const { courseId } = useParams<{ courseId: string }>();
@@ -13,14 +13,28 @@ export default function RecordPage() {
   const { getCourseById, updateCourse } = useCourseStore();
   const { currentPet } = usePetStore();
   const { records, addRecord, getRecordsByCourseId, getRecordById } = useTrainingRecordStore();
+  const { addTask, getTaskByRecordId } = useHomeworkTaskStore();
 
   const course = courseId ? getCourseById(courseId) : null;
   const courseRecords = courseId ? getRecordsByCourseId(courseId) : [];
 
-  const existingRecord = recordIdParam ? getRecordById(recordIdParam) : null;
+  const getRecordByRecordId = (id: string) => {
+    return records.find(r => r.id === id);
+  };
+
+  const existingRecord = recordIdParam ? getRecordByRecordId(recordIdParam) : null;
   const isEditing = !!existingRecord;
 
+  const existingTask = existingRecord ? getTaskByRecordId(existingRecord.id) : null;
+
+  const getNextLessonNumber = () => {
+    if (courseRecords.length === 0) return 1;
+    const maxLesson = Math.max(...courseRecords.map(r => r.lessonNumber || 1));
+    return maxLesson + 1;
+  };
+
   const [record, setRecord] = useState({
+    lessonNumber: 1,
     actions: [
       { action: '', result: ActionResult.GOOD, attempts: 10, successes: 0 }
     ],
@@ -36,6 +50,7 @@ export default function RecordPage() {
   useEffect(() => {
     if (existingRecord) {
       setRecord({
+        lessonNumber: existingRecord.lessonNumber,
         actions: existingRecord.actionPerformance.length > 0
           ? existingRecord.actionPerformance
           : [{ action: '', result: ActionResult.GOOD, attempts: 10, successes: 0 }],
@@ -45,6 +60,11 @@ export default function RecordPage() {
         homeworkDue: new Date(existingRecord.homeworkDue),
         notes: existingRecord.notes
       });
+    } else {
+      setRecord(prev => ({
+        ...prev,
+        lessonNumber: getNextLessonNumber()
+      }));
     }
   }, [existingRecord]);
 
@@ -117,6 +137,7 @@ export default function RecordPage() {
     const trainingRecord: TrainingRecord = {
       id: existingRecord ? existingRecord.id : `record-${Date.now()}`,
       courseId: course.id,
+      lessonNumber: record.lessonNumber,
       petId: currentPet.id,
       trainerId: 'trainer-001',
       recordDate: existingRecord ? existingRecord.recordDate : new Date(),
@@ -129,6 +150,20 @@ export default function RecordPage() {
     };
 
     addRecord(trainingRecord, !existingRecord);
+
+    if (!existingRecord && record.homework.trim()) {
+      const task: HomeworkTask = {
+        id: `task-${Date.now()}`,
+        recordId: trainingRecord.id,
+        courseId: course.id,
+        lessonNumber: record.lessonNumber,
+        petId: currentPet.id,
+        content: record.homework,
+        dueDate: record.homeworkDue,
+        status: 'pending'
+      };
+      addTask(task);
+    }
 
     if (!existingRecord) {
       const nextLesson = course.completedLessons + 1;
@@ -171,7 +206,7 @@ export default function RecordPage() {
           <div className="w-10"></div>
         </div>
         <p className="text-white/80 text-sm mt-2 text-center">
-          {currentPet.name} · {course.name} · 第{course.completedLessons + 1}课次
+          {currentPet.name} · {course.name}
         </p>
       </div>
 
@@ -179,11 +214,41 @@ export default function RecordPage() {
         <div className="bg-white rounded-xl p-4 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Clipboard className="w-5 h-5 text-primary" />
+            <h3 className="font-semibold">课次信息</h3>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-text-primary mb-2">
+              第几课次
+            </label>
+            <select
+              value={record.lessonNumber}
+              onChange={(e) => setRecord({ ...record, lessonNumber: parseInt(e.target.value) })}
+              disabled={isEditing}
+              className={`w-full px-4 py-2 border border-gray-200 rounded-lg focus:outline-none ${
+                isEditing ? 'bg-gray-100' : 'focus:border-primary'
+              }`}
+            >
+              {Array.from({ length: course.totalLessons }, (_, i) => i + 1).map(num => (
+                <option key={num} value={num}>
+                  第{num}课次 {courseRecords.some(r => r.lessonNumber === num) && !isEditing ? '(已记录)' : ''}
+                </option>
+              ))}
+            </select>
+            {isEditing && (
+              <p className="text-xs text-text-secondary mt-1">编辑模式下不可修改课次</p>
+            )}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Clipboard className="w-5 h-5 text-primary" />
             <h3 className="font-semibold">动作表现</h3>
             {isEditing && (
               <span className="ml-auto text-xs text-secondary flex items-center gap-1">
                 <CheckCircle2 className="w-3 h-3" />
-                编辑模式
+                第{record.lessonNumber}课次
               </span>
             )}
           </div>
@@ -325,6 +390,9 @@ export default function RecordPage() {
           <div className="flex items-center gap-2 mb-4">
             <FileText className="w-5 h-5 text-accent" />
             <h3 className="font-semibold">家庭作业</h3>
+            {existingTask && (
+              <span className="ml-auto text-xs text-secondary">已生成任务</span>
+            )}
           </div>
 
           <textarea
@@ -344,6 +412,12 @@ export default function RecordPage() {
               className="w-full px-3 py-2 border border-gray-200 rounded-lg mt-1 focus:outline-none focus:border-accent"
             />
           </div>
+
+          {record.homework.trim() && !existingTask && (
+            <p className="text-xs text-secondary mt-2">
+              保存后将自动创建家庭作业任务
+            </p>
+          )}
         </div>
 
         <div className="bg-white rounded-xl p-4 shadow-sm">

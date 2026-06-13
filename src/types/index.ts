@@ -86,6 +86,7 @@ export interface ActionRecord {
 export interface TrainingRecord {
   id: string;
   courseId: string;
+  lessonNumber: number;
   petId: string;
   trainerId: string;
   recordDate: Date;
@@ -95,6 +96,19 @@ export interface TrainingRecord {
   homework: string;
   homeworkDue: Date;
   notes: string;
+}
+
+export interface HomeworkTask {
+  id: string;
+  recordId: string;
+  courseId: string;
+  lessonNumber: number;
+  petId: string;
+  content: string;
+  dueDate: Date;
+  status: 'pending' | 'completed';
+  completedAt?: Date;
+  checkInId?: string;
 }
 
 export interface CheckIn {

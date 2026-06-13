@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Dog, AlertTriangle, Heart, Activity, Edit2, Save, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Dog, AlertTriangle, Heart, Activity, Edit2, Save, X, Calendar } from 'lucide-react';
 import { usePetStore } from '../../stores';
 import { Temperament } from '../../types';
 
 export default function ProfilePage() {
+  const navigate = useNavigate();
   const { currentPet, updatePet } = usePetStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editedPet, setEditedPet] = useState(currentPet);
@@ -253,6 +255,19 @@ export default function ProfilePage() {
               {currentPet.healthNotes || '暂无健康备注'}
             </p>
           )}
+        </div>
+
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <h3 className="font-semibold text-text-primary mb-3">快捷操作</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => navigate('/booking')}
+              className="flex items-center gap-2 p-3 bg-accent/10 rounded-lg hover:bg-accent/20 transition"
+            >
+              <Calendar className="w-5 h-5 text-accent" />
+              <span className="text-sm font-medium text-accent">预约课程</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>

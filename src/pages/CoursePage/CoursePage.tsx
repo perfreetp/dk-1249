@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, BookOpen, Target, ChevronRight, Clock, CheckCircle2, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { Plus, BookOpen, Target, ChevronRight, Clock, CheckCircle2, ChevronDown, ChevronUp, Trash2, Calendar } from 'lucide-react';
 import { useCourseStore, usePetStore } from '../../stores';
 import { CourseCategory, LessonTarget } from '../../types';
 
@@ -98,12 +98,21 @@ export default function CoursePage() {
               {currentPet?.name}的课程安排
             </p>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="p-3 bg-white text-primary rounded-full shadow-lg hover:bg-white/90 transition"
-          >
-            <Plus className="w-6 h-6" />
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => navigate('/booking')}
+              className="p-2 bg-white/20 text-white rounded-full hover:bg-white/30 transition"
+              title="预约课程"
+            >
+              <Calendar className="w-5 h-5" />
+            </button>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="p-3 bg-white text-primary rounded-full shadow-lg hover:bg-white/90 transition"
+            >
+              <Plus className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-3 gap-3 mt-4">

@@ -96,6 +96,7 @@ export const mockTrainingRecords: TrainingRecord[] = [
   {
     id: 'record-001',
     courseId: 'course-001',
+    lessonNumber: 1,
     petId: 'pet-001',
     trainerId: 'trainer-001',
     recordDate: new Date('2024-03-01'),
@@ -113,6 +114,7 @@ export const mockTrainingRecords: TrainingRecord[] = [
   {
     id: 'record-002',
     courseId: 'course-001',
+    lessonNumber: 2,
     petId: 'pet-001',
     trainerId: 'trainer-001',
     recordDate: new Date('2024-03-08'),
@@ -130,6 +132,7 @@ export const mockTrainingRecords: TrainingRecord[] = [
   {
     id: 'record-003',
     courseId: 'course-001',
+    lessonNumber: 3,
     petId: 'pet-001',
     trainerId: 'trainer-001',
     recordDate: new Date('2024-03-15'),

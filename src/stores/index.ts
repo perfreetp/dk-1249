@@ -5,3 +5,4 @@ export { useEvaluationStore } from './evaluationStore';
 export { useMessageStore } from './messageStore';
 export { useBookingStore } from './bookingStore';
 export { useTrainingRecordStore } from './trainingRecordStore';
+export { useHomeworkTaskStore } from './homeworkTaskStore';

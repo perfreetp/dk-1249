@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Video, Calendar, CheckCircle2, Star, Upload, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useCheckInStore, usePetStore, useCourseStore } from '../../stores';
+import { Video, Calendar, CheckCircle2, Star, Upload, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { useCheckInStore, usePetStore, useCourseStore, useHomeworkTaskStore } from '../../stores';
 import { CheckIn } from '../../types';
 
 export default function CheckInPage() {
@@ -9,8 +9,10 @@ export default function CheckInPage() {
   const { checkIns, addCheckIn, getTodayCheckIn, getCheckInsByPetId } = useCheckInStore();
   const { currentPet } = usePetStore();
   const { courses, getCourseById } = useCourseStore();
+  const { getPendingTasks, completeTask } = useHomeworkTaskStore();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('');
   const [uploadData, setUploadData] = useState({
     videoUrl: '',
     completionRate: 80,
@@ -27,6 +29,7 @@ export default function CheckInPage() {
 
   const petCheckIns = getCheckInsByPetId(currentPet.id);
   const todayCheckIn = getTodayCheckIn(currentPet.id);
+  const pendingTasks = currentPet ? getPendingTasks(currentPet.id) : [];
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear();
@@ -79,7 +82,7 @@ export default function CheckInPage() {
     const newCheckIn: CheckIn = {
       id: `checkin-${Date.now()}`,
       petId: currentPet.id,
-      recordId: 'homework',
+      recordId: selectedTaskId || 'homework',
       videoUrl: uploadData.videoUrl || 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4',
       thumbnailUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=checkin',
       completionRate: uploadData.completionRate,
@@ -88,7 +91,13 @@ export default function CheckInPage() {
     };
 
     addCheckIn(newCheckIn);
+
+    if (selectedTaskId) {
+      completeTask(selectedTaskId, newCheckIn.id);
+    }
+
     setShowUploadModal(false);
+    setSelectedTaskId('');
     setUploadData({
       videoUrl: '',
       completionRate: 80,
@@ -226,7 +235,10 @@ export default function CheckInPage() {
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-xl font-bold">上传练习视频</h2>
               <button
-                onClick={() => setShowUploadModal(false)}
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setSelectedTaskId('');
+                }}
                 className="p-2 text-gray-400 hover:text-gray-600"
               >
                 ✕
@@ -234,6 +246,47 @@ export default function CheckInPage() {
             </div>
 
             <div className="space-y-4">
+              {pendingTasks.length > 0 && (
+                <div>
+                  <label className="block text-sm font-medium text-text-primary mb-2">
+                    <FileText className="w-4 h-4 inline mr-1" />
+                    选择对应的作业（可选）
+                  </label>
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    <div
+                      onClick={() => setSelectedTaskId('')}
+                      className={`p-3 rounded-lg cursor-pointer transition ${
+                        selectedTaskId === ''
+                          ? 'bg-primary/10 border-2 border-primary'
+                          : 'bg-gray-50 hover:bg-gray-100'
+                      }`}
+                    >
+                      <p className="text-sm font-medium">不关联作业</p>
+                      <p className="text-xs text-text-secondary">自由打卡</p>
+                    </div>
+                    {pendingTasks.map((task) => {
+                      const course = getCourseById(task.courseId);
+                      return (
+                        <div
+                          key={task.id}
+                          onClick={() => setSelectedTaskId(task.id)}
+                          className={`p-3 rounded-lg cursor-pointer transition ${
+                            selectedTaskId === task.id
+                              ? 'bg-primary/10 border-2 border-primary'
+                              : 'bg-gray-50 hover:bg-gray-100'
+                          }`}
+                        >
+                          <p className="text-sm font-medium">
+                            第{task.lessonNumber}课 - {course?.name || '课程'}
+                          </p>
+                          <p className="text-xs text-text-secondary line-clamp-2">{task.content}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-primary transition cursor-pointer">
                 <Upload className="w-12 h-12 text-gray-400 mx-auto mb-2" />
                 <p className="text-sm text-text-secondary">点击上传视频文件</p>
