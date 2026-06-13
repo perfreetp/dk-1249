@@ -11,6 +11,7 @@ import BookingPage from "./pages/BookingPage/BookingPage";
 import RecordPage from "./pages/RecordPage/RecordPage";
 import ReportPage from "./pages/ReportPage/ReportPage";
 import ReviewPage from "./pages/ReviewPage/ReviewPage";
+import HomeworkPage from "./pages/HomeworkPage/HomeworkPage";
 import { useInitializeData } from "./hooks/useInitializeData";
 
 function Home() {
@@ -36,6 +37,7 @@ function App() {
           <Route path="/booking" element={<BookingPage />} />
           <Route path="/report" element={<ReportPage />} />
           <Route path="/review" element={<ReviewPage />} />
+          <Route path="/homework" element={<HomeworkPage />} />
         </Routes>
         <Navigation />
       </div>

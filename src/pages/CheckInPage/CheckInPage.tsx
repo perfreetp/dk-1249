@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Video, Calendar, CheckCircle2, Star, Upload, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { Video, Calendar, CheckCircle2, Star, Upload, ChevronLeft, ChevronRight, FileText, List } from 'lucide-react';
 import { useCheckInStore, usePetStore, useCourseStore, useHomeworkTaskStore } from '../../stores';
 import { CheckIn } from '../../types';
 
@@ -9,7 +9,7 @@ export default function CheckInPage() {
   const { checkIns, addCheckIn, getTodayCheckIn, getCheckInsByPetId } = useCheckInStore();
   const { currentPet } = usePetStore();
   const { courses, getCourseById } = useCourseStore();
-  const { getPendingTasks, completeTask } = useHomeworkTaskStore();
+  const { getPendingTasks, completeTask, getTaskByRecordId, tasks } = useHomeworkTaskStore();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [selectedTaskId, setSelectedTaskId] = useState<string>('');
@@ -185,48 +185,65 @@ export default function CheckInPage() {
           </div>
         </div>
 
-        <div className="space-y-3">
+        <div className="flex items-center justify-between mb-4">
           <h3 className="font-semibold text-text-primary">打卡历史</h3>
-          {petCheckIns.length === 0 ? (
-            <div className="bg-white rounded-xl p-8 text-center">
-              <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-text-secondary">暂无打卡记录</p>
-            </div>
-          ) : (
-            petCheckIns.slice(0, 5).map((checkIn) => {
-              const course = getCourseById(checkIn.recordId);
-              return (
-                <div key={checkIn.id} className="bg-white rounded-xl p-4 shadow-sm">
-                  <div className="flex items-start gap-3">
-                    <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
-                      <Video className="w-6 h-6 text-gray-400" />
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-1">
-                        <p className="font-medium text-text-primary">
-                          {new Date(checkIn.checkInDate).toLocaleDateString('zh-CN', {
-                            month: 'short',
-                            day: 'numeric'
-                          })}
-                        </p>
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                          <span className="text-sm font-medium">{checkIn.completionRate}%</span>
-                        </div>
+          <button
+            onClick={() => navigate('/homework')}
+            className="flex items-center gap-1 text-sm text-secondary hover:underline"
+          >
+            <List className="w-4 h-4" />
+            作业列表
+          </button>
+        </div>
+        {petCheckIns.length === 0 ? (
+          <div className="bg-white rounded-xl p-8 text-center">
+            <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-text-secondary">暂无打卡记录</p>
+          </div>
+        ) : (
+          petCheckIns.slice(0, 5).map((checkIn) => {
+            const course = getCourseById(checkIn.recordId);
+            const linkedTask = tasks.find(t => t.checkInId === checkIn.id);
+            return (
+              <div key={checkIn.id} className="bg-white rounded-xl p-4 shadow-sm">
+                <div className="flex items-start gap-3">
+                  <div className="w-16 h-16 bg-gray-100 rounded-lg flex items-center justify-center overflow-hidden">
+                    <Video className="w-6 h-6 text-gray-400" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="font-medium text-text-primary">
+                        {new Date(checkIn.checkInDate).toLocaleDateString('zh-CN', {
+                          month: 'short',
+                          day: 'numeric'
+                        })}
+                      </p>
+                      <div className="flex items-center gap-1">
+                        <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                        <span className="text-sm font-medium">{checkIn.completionRate}%</span>
                       </div>
-                      {course && (
-                        <p className="text-xs text-text-secondary mb-1">{course.name}</p>
-                      )}
-                      {checkIn.notes && (
-                        <p className="text-xs text-text-secondary">{checkIn.notes}</p>
-                      )}
                     </div>
+                    {linkedTask ? (
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="px-2 py-0.5 bg-secondary/10 text-secondary rounded text-xs">
+                          第{linkedTask.lessonNumber}课作业
+                        </span>
+                        <span className="text-xs text-text-secondary">{getCourseById(linkedTask.courseId)?.name}</span>
+                      </div>
+                    ) : (
+                      course && (
+                        <p className="text-xs text-text-secondary mb-1">{course.name}</p>
+                      )
+                    )}
+                    {checkIn.notes && (
+                      <p className="text-xs text-text-secondary">{checkIn.notes}</p>
+                    )}
                   </div>
                 </div>
-              );
-            })
-          )}
-        </div>
+              </div>
+            );
+          })
+        )}
       </div>
 
       {showUploadModal && (

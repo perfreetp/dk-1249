@@ -1,6 +1,7 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, Clipboard, ChevronDown, ChevronUp, CheckCircle2, Target, Clock } from 'lucide-react';
-import { useCourseStore, usePetStore, useTrainingRecordStore } from '../../stores';
+import { ChevronLeft, Clipboard, ChevronDown, ChevronUp, CheckCircle2, Target, Clock, BarChart3, FileText, Video } from 'lucide-react';
+import { useCourseStore, usePetStore, useTrainingRecordStore, useHomeworkTaskStore, useCheckInStore, useEvaluationStore } from '../../stores';
+import { useState, useEffect } from 'react';
 
 export default function CourseDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -8,11 +9,17 @@ export default function CourseDetailPage() {
   const { getCourseById } = useCourseStore();
   const { currentPet } = usePetStore();
   const { records, getRecordsByCourseId } = useTrainingRecordStore();
+  const { getTasksByCourseId } = useHomeworkTaskStore();
+  const { checkIns, getCheckInsByPetId } = useCheckInStore();
+  const { evaluations } = useEvaluationStore();
   const [expandedTargets, setExpandedTargets] = useState(false);
   const [expandedRecords, setExpandedRecords] = useState(false);
+  const [selectedLessonForReview, setSelectedLessonForReview] = useState<number | null>(null);
 
   const course = id ? getCourseById(id) : null;
   const courseRecords = id ? getRecordsByCourseId(id) : [];
+  const courseTasks = id ? getTasksByCourseId(id) : [];
+  const courseEvaluations = id ? evaluations.filter(e => e.courseId === id) : [];
 
   if (!course) {
     return (
@@ -33,6 +40,24 @@ export default function CourseDetailPage() {
       default:
         return 'bg-gray-100 text-gray-600';
     }
+  };
+
+  const getRecordForLesson = (lessonNumber: number) => {
+    return courseRecords.find(r => r.lessonNumber === lessonNumber);
+  };
+
+  const getTaskForLesson = (lessonNumber: number) => {
+    return courseTasks.find(t => t.lessonNumber === lessonNumber);
+  };
+
+  const getEvaluationForLesson = (lessonNumber: number) => {
+    const relatedRecord = getRecordForLesson(lessonNumber);
+    if (!relatedRecord) return null;
+    const recordDate = new Date(relatedRecord.recordDate);
+    return courseEvaluations.find(e => {
+      const evalDate = new Date(e.evaluatedAt);
+      return Math.abs(evalDate.getTime() - recordDate.getTime()) < 7 * 24 * 60 * 60 * 1000;
+    });
   };
 
   const progress = Math.round((course.completedLessons / course.totalLessons) * 100);
@@ -164,35 +189,69 @@ export default function CourseDetailPage() {
 
               {(expandedRecords || courseRecords.length <= 2) ? (
                 <div className="space-y-2">
-                  {courseRecords.map((record) => (
-                    <div
-                      key={record.id}
-                      onClick={() => navigate(`/record/${course.id}?recordId=${record.id}`)}
-                      className="p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition"
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="flex items-center gap-3">
-                          <span className="px-2 py-1 bg-primary text-white rounded text-xs font-medium">
-                            第{record.lessonNumber}课
-                          </span>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Clock className="w-4 h-4 text-text-secondary" />
-                            <span className="text-text-primary">
-                              {new Date(record.recordDate).toLocaleDateString('zh-CN')}
+                  {courseRecords.map((record) => {
+                    const task = getTaskForLesson(record.lessonNumber);
+                    const evaluation = getEvaluationForLesson(record.lessonNumber);
+                    return (
+                      <div
+                        key={record.id}
+                        className="p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center gap-3">
+                            <span className="px-2 py-1 bg-primary text-white rounded text-xs font-medium">
+                              第{record.lessonNumber}课
+                            </span>
+                            <div className="flex items-center gap-2 text-sm">
+                              <Clock className="w-4 h-4 text-text-secondary" />
+                              <span className="text-text-primary">
+                                {new Date(record.recordDate).toLocaleDateString('zh-CN')}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded text-xs">
+                              {record.actionPerformance.length}个动作
                             </span>
                           </div>
                         </div>
-                        <span className="text-xs text-primary">编辑</span>
+
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {record.actionPerformance.map((action, idx) => (
+                            <span key={idx} className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">
+                              {action.action}
+                            </span>
+                          ))}
+                        </div>
+
+                        <div className="flex items-center gap-3 text-xs text-text-secondary">
+                          {task && (
+                            <span className={`flex items-center gap-1 ${
+                              task.status === 'completed' ? 'text-secondary' : 'text-yellow-500'
+                            }`}>
+                              <FileText className="w-3 h-3" />
+                              {task.status === 'completed' ? '作业已完成' : '作业待完成'}
+                            </span>
+                          )}
+                          {evaluation && (
+                            <span className="flex items-center gap-1 text-accent">
+                              <BarChart3 className="w-3 h-3" />
+                              评分{evaluation.overallScore}分
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            onClick={() => navigate(`/record/${course.id}?recordId=${record.id}`)}
+                            className="flex-1 py-1.5 bg-primary text-white rounded text-xs font-medium hover:bg-primary-dark transition"
+                          >
+                            编辑记录
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex flex-wrap gap-1">
-                        {record.actionPerformance.map((action, idx) => (
-                          <span key={idx} className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">
-                            {action.action}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : null}
             </>
@@ -208,9 +267,143 @@ export default function CourseDetailPage() {
             {courseRecords.length > 0 ? '添加新记录' : '开始记录'}
           </button>
         </div>
+
+        <div className="bg-white rounded-xl p-4 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-accent" />
+              <h3 className="font-semibold">课程复盘</h3>
+            </div>
+          </div>
+
+          <p className="text-sm text-text-secondary mb-3">
+            按课次查看完整的训练记录、作业和评估
+          </p>
+
+          <div className="grid grid-cols-4 gap-2 mb-3">
+            {Array.from({ length: Math.min(course.totalLessons, 8) }, (_, i) => i + 1).map(lessonNum => {
+              const hasRecord = !!getRecordForLesson(lessonNum);
+              return (
+                <button
+                  key={lessonNum}
+                  onClick={() => hasRecord && setSelectedLessonForReview(lessonNum)}
+                  className={`py-2 rounded-lg text-sm font-medium transition ${
+                    hasRecord
+                      ? selectedLessonForReview === lessonNum
+                        ? 'bg-accent text-white'
+                        : 'bg-accent/10 text-accent hover:bg-accent/20'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                  disabled={!hasRecord}
+                >
+                  第{lessonNum}课
+                </button>
+              );
+            })}
+          </div>
+
+          {selectedLessonForReview && (
+            <div className="border border-gray-200 rounded-lg p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="font-semibold">第{selectedLessonForReview}课 复盘</h4>
+                <button
+                  onClick={() => setSelectedLessonForReview(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {(() => {
+                const record = getRecordForLesson(selectedLessonForReview);
+                const task = getTaskForLesson(selectedLessonForReview);
+                const evaluation = getEvaluationForLesson(selectedLessonForReview);
+
+                if (!record) return <p className="text-sm text-text-secondary">暂无记录</p>;
+
+                return (
+                  <div className="space-y-4">
+                    <div>
+                      <h5 className="text-sm font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <Clipboard className="w-4 h-4" />
+                        课堂记录
+                      </h5>
+                      <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                        <div className="flex flex-wrap gap-1 mb-2">
+                          {record.actionPerformance.map((action, idx) => (
+                            <span key={idx} className="px-2 py-0.5 bg-primary/10 text-primary rounded text-xs">
+                              {action.action} ({action.result})
+                            </span>
+                          ))}
+                        </div>
+                        {record.rewardMethod.length > 0 && (
+                          <p className="text-xs text-text-secondary">
+                            奖励方式: {record.rewardMethod.join(', ')}
+                          </p>
+                        )}
+                        {record.problemBehaviors.length > 0 && (
+                          <p className="text-xs text-yellow-600">
+                            问题行为: {record.problemBehaviors.join(', ')}
+                          </p>
+                        )}
+                        {record.notes && (
+                          <p className="text-xs text-text-secondary mt-2">{record.notes}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    <div>
+                      <h5 className="text-sm font-medium text-text-primary mb-2 flex items-center gap-2">
+                        <FileText className="w-4 h-4" />
+                        家庭作业
+                      </h5>
+                      {task ? (
+                        <div className={`rounded-lg p-3 text-sm ${
+                          task.status === 'completed' ? 'bg-secondary/10' : 'bg-yellow-50'
+                        }`}>
+                          <p className="text-text-primary">{task.content}</p>
+                          <p className="text-xs text-text-secondary mt-1">
+                            截止: {new Date(task.dueDate).toLocaleDateString('zh-CN')}
+                          </p>
+                          <p className={`text-xs mt-1 ${
+                            task.status === 'completed' ? 'text-secondary' : 'text-yellow-600'
+                          }`}>
+                            状态: {task.status === 'completed' ? '已完成' : '待完成'}
+                          </p>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-text-secondary bg-gray-50 rounded-lg p-3">暂无作业</p>
+                      )}
+                    </div>
+
+                    {evaluation && (
+                      <div>
+                        <h5 className="text-sm font-medium text-text-primary mb-2 flex items-center gap-2">
+                          <BarChart3 className="w-4 h-4" />
+                          评估结果
+                        </h5>
+                        <div className="bg-accent/10 rounded-lg p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-text-secondary">综合评分</span>
+                            <span className="text-lg font-bold text-accent">{evaluation.overallScore}分</span>
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 text-xs">
+                            <div>反应速度: {evaluation.reactionSpeed}分</div>
+                            <div>稳定性: {evaluation.stability}分</div>
+                            <div>专注度: {evaluation.focus}分</div>
+                            <div>服从性: {evaluation.obedience}分</div>
+                          </div>
+                          <p className="text-xs text-text-secondary mt-2">{evaluation.comment}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
 }
-
-import { useState } from 'react';
